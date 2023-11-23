@@ -1,18 +1,23 @@
 <template>
   <div id="app">
-    <h1>AI Chatbot</h1>
-    <div>
-      <input type="password" v-model="apiKey" placeholder="Enter OpenAI API Key" />
-      <button @click="saveApiKey">Save API Key</button>
-    </div>
-    <div class="chat-window">
-      <ul>
-        <li v-for="message in messages" :key="message.id" :class="{'user-message': message.type === 'user', 'ai-message': message.type === 'ai'}">
-          {{ message.text }}
-        </li>
-      </ul>
-    </div>
-    <input type="text" v-model="userInput" @keyup.enter="sendMessage" placeholder="Type your message here"/>
+    <header>
+      <h1>OpenAI Question Answering App</h1>
+    </header>
+    <main>
+      <div class="input-group">
+        <label for="api-key">Enter OpenAI API Key:</label>
+        <input id="api-key" type="password" v-model="apiKey" placeholder="OpenAI API Key" />
+      </div>
+      <div class="input-group">
+        <label for="question">Enter Your Question:</label>
+        <textarea id="question" v-model="userQuestion" placeholder="Type your question here"></textarea>
+        <button @click="fetchAnswer">Get Answer</button>
+      </div>
+      <div v-if="answer" class="answer-section">
+        <h2>Answer:</h2>
+        <p>{{ answer }}</p>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -23,25 +28,27 @@ export default {
   data() {
     return {
       apiKey: '',
-      userInput: '',
-      messages: [],
-      nextId: 0
+      userQuestion: '',
+      answer: ''
     };
   },
   methods: {
-    addMessage(type, text) {
-      this.messages.push({ id: this.nextId++, type, text });
-    },
-    async fetchAIResponse(prompt) {
+    async fetchAnswer() {
       if (!this.apiKey.trim()) {
         alert('API key is required');
         return;
       }
+      if (!this.userQuestion.trim()) {
+        alert('Please enter a question');
+        return;
+      }
 
       try {
-        const response = await axios.post('https://api.openai.com/v1/engines/davinci-codex/completions', {
-          prompt: prompt,
-          max_tokens: 150
+        const prompt = `Answer concisely: ${this.userQuestion}`;
+        const response = await axios.post('https://api.openai.com/v1/engines/davinci/completions', {
+        prompt: prompt,
+        max_tokens: 100,
+        temperature: 0.7
         }, {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
@@ -49,27 +56,11 @@ export default {
           }
         });
 
-        this.addMessage('ai', response.data.choices[0].text.trim());
+        this.answer = response.data.choices[0].text.trim();
       } catch (error) {
-        console.error('Error fetching AI response:', error);
-        alert('Failed to fetch AI response. Check the console for more details.');
+        console.error('Error fetching answer:', error);
+        this.answer = 'Failed to fetch answer. Check the console for more details.';
       }
-    },
-    sendMessage() {
-      if (!this.userInput.trim()) return;
-
-      this.addMessage('user', this.userInput);
-
-      this.fetchAIResponse(this.userInput);
-
-      this.userInput = '';
-    },
-    saveApiKey() {
-      if (!this.apiKey.trim()) {
-        alert('Please enter a valid API key');
-        return;
-      }
-      alert('API Key saved! You can now interact with the AI.');
     }
   }
 }
@@ -77,42 +68,50 @@ export default {
 
 <style>
 #app {
-  max-width: 600px;
-  margin: 40px auto;
+  width: 100%;
+  min-height: 100vh;
+  padding: 40px 20px;
+  box-sizing: border-box;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.chat-window {
-  border: 1px solid #ddd;
-  padding: 20px;
-  height: 300px;
-  overflow-y: auto;
+
+header {
+  margin-bottom: 30px;
+}
+
+.input-group {
+  width: 80%;
+  max-width: 600px;
   margin-bottom: 20px;
-  background-color: #f9f9f9;
 }
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
+
+label {
+  display: block;
   margin-bottom: 10px;
-  word-break: break-all;
+  font-size: 1.2em;
 }
-.user-message {
-  color: blue;
-  text-align: right;
-}
-.ai-message {
-  color: green;
-  text-align: left;
-}
-input[type="text"], input[type="password"] {
-  width: 70%;
+
+input[type="password"], textarea {
+  width: 100%;
   padding: 10px;
-  margin-bottom: 10px;
+  font-size: 1em;
+  margin-bottom: 20px;
 }
+
 button {
   padding: 10px 20px;
   cursor: pointer;
+  font-size: 1em;
+}
+
+.answer-section {
+  margin-top: 30px;
+  width: 80%;
+  max-width: 600px;
+  text-align: left;
 }
 </style>
 
